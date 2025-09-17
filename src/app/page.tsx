@@ -1,103 +1,111 @@
-import Image from "next/image";
+"use client";  
+import { useState } from "react";
+import React from "react";
+import Dice from '../components/dice'
+import { useRouter } from "next/navigation"
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [results, setResults] = useState<number[]>([null, null, null])
+  const [total, setTotal] = useState<number | null>(null)
+  const [rolling, setRolling] = useState([false, false, false])
+  const [money, setMoney] = useState<number>(1000)
+  const [message, setMessage] = useState<string>("")
+  const [spinCount, setSpinCount] = useState<number>(0)
+  const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  async function rollDice(i: number) {
+    if (spinCount >= 15) {
+      setMessage("Maximalt antal kast (15) nått! Sidan laddas om...");
+      setTimeout(() => window.location.reload(), 1000)
+      return
+    }
+    if (money < 10) {
+      setMessage("DU ÄR FATTIG LÄGG IN MERA PENGAR😡😡😡😡!")
+      return
+    }
+    setMoney(money - 20)
+    setMessage("")
+
+    const newRolling = [...rolling]
+    newRolling[i] = true
+    setRolling(newRolling)
+
+    const res = await fetch("/api/roll")
+    const data = await res.json()
+
+    setTimeout(() => {
+      const newResults = [...results]
+      newResults[i] = data.roll
+      setResults(newResults)
+      setTotal(newResults.reduce((sum, val) => sum + (val || 0), 0))
+
+      newRolling[i] = false
+      setRolling([...newRolling])
+
+      setSpinCount(count => count + 1);
+
+      if (newResults.every(val => val !== null)) {
+        if (newResults[0] === newResults[1] && newResults[1] === newResults[2]) {
+          const winValue = newResults[0]
+          const winAmount = winValue * 50
+          setMoney(m => m + winAmount)
+          setTimeout(() => {
+            window.alert(`Grattis! Du fick tre i rad med ${winValue}. Du vann ${winAmount}€!`)
+            window.location.reload()
+          }, 2000)
+        } else {
+          setMessage("Ingen vinst. Försök igen! 🤣🤣🤣")
+        }
+      }
+    }, 500)
+  }
+
+  React.useEffect(() => {
+    setResults([null, null, null])
+  }, [])
+
+  return (
+   <main className="flex flex-col select-none items-center justify-center min-h-screen
+    bg-gradient-to-br from-black via-[#0a1833] to-[#1e293b] relative">
+      <div className="absolute top-6 right-8 flex gap-4">
+        <button
+          onClick={() => router.push("/login")}
+          className="px-6 py-2 rounded bg-blue-700 hover:bg-blue-500 text-white font-semibold shadow-lg transition"
+        >
+          Logga in
+        </button>
+        <button
+          onClick={() => router.push("/register")}
+          className="px-6 py-2 rounded bg-blue-700 hover:bg-blue-500 text-white font-semibold shadow-lg transition"
+        >
+          Skapa konto
+        </button>
+      </div>
+      <h1 className="text-3xl font-bold mt-8 mb-8 text-center text-white">SLÅ TÄRNINGEN!!!</h1>
+      <div className="flex flex-col  items-center border-4 border-blue-700 rounded-lg bg-gray-800 p-10 shadow-lg text-black">
+        <div className="mb-4 text-white text-lg">Pengar: {money}€</div>
+        <div className="mb-2 text-white text-md">Kast kvar: {15 - spinCount}</div>
+        <div>
+          <div className="flex flex-row gap-8 mb-4 justify-center">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex flex-col items-center">
+                <span className="flex items-center justify-center h-[128px] w-[128px] mb-2 rounded overflow-hidden bg-gray-700">
+                  <Dice value={results[i]} rolling={rolling[i]} />
+                </span>
+                <button
+                  onClick={() => rollDice(i)}
+                  className="bg-blue-700 hover:bg-blue-500 text-white px-4 py-2 rounded"
+                  disabled={rolling[i] || money < 20 || spinCount >= 15}
+                >
+                  Kasta (-20€)
+                </button>
+              </div>
+            ))}
+          </div>
+          {total !== null && <p className="mt-4 text-lg text-center text-white">Total: {total}</p>}
+          {message && <p className="mt-2 text-center text-yellow-300">{message}</p>}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+      </div>
+    </main>
+  )
 }
