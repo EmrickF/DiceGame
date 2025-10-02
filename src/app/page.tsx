@@ -4,9 +4,10 @@ import Dice from '../components/dice'
 import { useRouter } from "next/navigation"
 
 export default function Home() {
-  const [results, setResults] = useState<number[]>([null, null, null])
+  const [results, setResults] = useState<(number | null)[]>([null, null, null])
   const [total, setTotal] = useState<number | null>(null)
   const [rolling, setRolling] = useState([false, false, false])
+  const [money, setMoney] = useState<number>(1000)
   const [message, setMessage] = useState<string>("")
   const [spinCount, setSpinCount] = useState<number>(0)
   const router = useRouter()
@@ -79,7 +80,7 @@ export default function Home() {
       if (newResults.every(val => val !== null)) {
         if (newResults[0] === newResults[1] && newResults[1] === newResults[2]) {
           const winValue = newResults[0]
-          const winAmount = winValue * 100
+          const winAmount = winValue * 50
           setMoney(m => m + winAmount)
           saveMoney()
           setTimeout(() => {
@@ -93,11 +94,9 @@ export default function Home() {
     }, 500)
   }
 
-  useEffect(() => {
+  React.useEffect(() => {
     setResults([null, null, null])
   }, [])
-
- 
 
   return (
    <main className="flex flex-col select-none items-center justify-center min-h-screen
