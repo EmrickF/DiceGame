@@ -1,6 +1,5 @@
-"use client";  
-import { useState } from "react";
-import React from "react";
+"use client";
+import { useState, useEffect } from "react"
 import Dice from '../components/dice'
 import { useRouter } from "next/navigation"
 
@@ -8,10 +7,43 @@ export default function Home() {
   const [results, setResults] = useState<number[]>([null, null, null])
   const [total, setTotal] = useState<number | null>(null)
   const [rolling, setRolling] = useState([false, false, false])
-  const [money, setMoney] = useState<number>(1000)
   const [message, setMessage] = useState<string>("")
   const [spinCount, setSpinCount] = useState<number>(0)
-  const router = useRouter();
+  const router = useRouter()
+  const [money, setMoney] = useState<number>(0)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchMoney() {
+      const res = await fetch("/api/save")
+      const data = await res.json()
+      console.log(data)
+      if (data.length > 0) {
+        setMoney(data[0].amount)
+      }
+      else {
+        setMoney(1000) 
+      }
+      setLoading(false)
+    }
+    fetchMoney()
+  }, [])
+
+  function saveMoney() {
+      fetch("/api/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cash: money })
+      })
+      .then (res => res.json())
+      .then (data => {
+        console.log(data)
+      })
+      .catch (err => {
+        console.error("Network error:", err)
+      })
+  }
+  
 
   async function rollDice(i: number) {
     if (spinCount >= 15) {
@@ -19,7 +51,7 @@ export default function Home() {
       setTimeout(() => window.location.reload(), 1000)
       return
     }
-    if (money < 10) {
+    if (money < 20) {
       setMessage("DU ÄR FATTIG LÄGG IN MERA PENGAR😡😡😡😡!")
       return
     }
@@ -42,13 +74,14 @@ export default function Home() {
       newRolling[i] = false
       setRolling([...newRolling])
 
-      setSpinCount(count => count + 1);
+      setSpinCount(count => count + 1)
 
       if (newResults.every(val => val !== null)) {
         if (newResults[0] === newResults[1] && newResults[1] === newResults[2]) {
           const winValue = newResults[0]
-          const winAmount = winValue * 50
+          const winAmount = winValue * 100
           setMoney(m => m + winAmount)
+          saveMoney()
           setTimeout(() => {
             window.alert(`Grattis! Du fick tre i rad med ${winValue}. Du vann ${winAmount}€!`)
             window.location.reload()
@@ -60,9 +93,11 @@ export default function Home() {
     }, 500)
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     setResults([null, null, null])
   }, [])
+
+ 
 
   return (
    <main className="flex flex-col select-none items-center justify-center min-h-screen
